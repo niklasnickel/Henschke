@@ -1,15 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy import optimize
 
 
 class SettlingCurve:
-    h_c_exp = None,
-    h_c_calc = None
-    h_d_exp = None
-    h_d_calc = None
-    t_exp = None
-    t_calc = None
+
+    def reset(self):
+        self.h_c_calc = list()
+        self.h_d_calc = list()
+        self.h_pl_calc = list()
+        self.t_calc = list()
 
     def __init__(self):
         data = pd.read_excel('data.xlsx', 'Data')
@@ -19,9 +20,14 @@ class SettlingCurve:
         self.h_d_exp = data['h_d']
         self.h_d_calc = list()
 
-        self.t_exp = data['t']
+        self.h_pl_calc = list()
 
-    def get_settling_curve(self):
+        self.t_exp = data['t']
+        self.t_calc = list()
+
+    def get_settling_curve(self, r_s, plotting=False):
+        print(f"Calculating settling curve for r_s = {r_s}")
+        self.reset()
         # Set initial conditions
         h_c = H_0
         h_d = 0
@@ -60,25 +66,36 @@ class SettlingCurve:
                 h_eff = Φ_32[i_low] / 2
             else:
                 h_eff = h_p
-            τ_di = τ(h_eff, Φ_32[i_low], 'i')
+            τ_di = τ(h_eff, Φ_32[i_low], 'i', r_s)
             Δh_d = 2 * ε_di * Φ_32[i_low] * Δt / (3 * τ_di)
             for i in range(i_low, i_high - 1):
                 h_py = (h_d + h_p * ε_p - i * Δh * ε_0) / ε_p
-                τ_dd = τ(h_py, Φ_32[i], 'd')
+                τ_dd = τ(h_py, Φ_32[i], 'd', r_s)
                 Φ_32[i] = Φ_32[i] + Δt * Φ_32[i] / (6 * τ_dd)
 
-            # Plotting
-            packed_layer_curve.append(h_d + h_p)
+            self.h_pl_calc.append(h_d + h_p)
             self.h_d_calc.append(h_d)
             self.h_c_calc.append(h_c)
 
         t_E_calc = t
-        self.t_calc = np.linspace(0, t_E_calc, len(packed_layer_curve))
+        self.t_calc = np.linspace(0, t_E_calc, len(self.h_c_calc))
+        if plotting: self.plot()
+        return self
+
+    def get_error(self):
+        point_error = 0
+        N = len(self.t_exp)
+        for t, h_d in zip(self.t_exp, self.h_d_exp):
+            h_d_calc = np.interp(t, self.t_calc, self.h_d_calc)
+            point_error += ((h_d_calc - h_d) / H_0) ** 2
+        err = np.sqrt(point_error / N)
+        print(f"Q = {err}")
+        return err
 
     def plot(self):
         plt.subplots()
 
-        plt.plot(self.t_calc, packed_layer_curve, label='h_d + h_p')
+        plt.plot(self.t_calc, self.h_pl_calc, label='h_d + h_p')
         plt.plot(self.t_calc, self.h_d_calc, label='h_d')
         plt.plot(self.t_calc, self.h_c_calc, label='h_c')
 
@@ -87,8 +104,6 @@ class SettlingCurve:
 
         plt.legend()
         plt.draw()
-
-        print(f"{self.t_calc[-1]}")
         plt.show()
 
 
@@ -111,16 +126,14 @@ N_t = 500
 N_h = 500
 ε_di = 1
 
-r_s = 0.002  # Initial guess of coalescence parameter [-]
-
 # Derived values
-Φ_32_0 = 2 / 1000  # Sauter mean diameter [m]
+Φ_32_0 = 0.1 / 1000  # Sauter mean diameter [m]
 v_s = -3 / 1000  # Sedimentation velocity [m/s]
 
 packed_layer_curve = list()
 
 
-def τ(h_p, Φ, ID):
+def τ(h_p, Φ, ID, r_s):
     La_mod = (g * Δρ / σ) ** 0.6 * Φ * h_p ** 0.2
     R_F = Φ * np.sqrt(1 - 4.7 / (4.7 + La_mod))
     if ID == 'd':
@@ -132,22 +145,22 @@ def τ(h_p, Φ, ID):
     return τ
 
 
-# def Q():
-#     sum = 0
-#     for t, h_d in t_exp, h_d_exp:
-#         h_d_calc = np.interp(t, h_d_calc, fp)
-#         pass
+# def import_data():
+#     # excel = pd.ExcelFile('data.xlsx')
+#     params = pd.read_excel('data.xlsx', 'Parameters')
+
+def get_r_s(plotting = False):
+    r_s_0 = 0.02  # Initial guess of coalescence parameter [-]
+    fun = lambda r_s : settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error()
+    result = optimize.minimize(fun, [r_s_0], method='Nelder-Mead', bounds=((0.0001, 0.5),))
+    print(f"Minimization terminated with Result \n{result}")
+    print(f"r_s = {result.x[0]}")
+    return result.x[0]
 
 
-def import_data():
-    # excel = pd.ExcelFile('data.xlsx')
-    params = pd.read_excel('data.xlsx', 'Parameters')
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    import_data()
-    settling_curve.get_settling_curve()
+    # import_data()
+    settling_curve.get_settling_curve(get_r_s())
     settling_curve.plot()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # Q = settling_curve.get_error()
+    # print(Q)
