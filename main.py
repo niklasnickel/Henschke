@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy import optimize
+from scipy import optimize, stats
 
 
 class SettlingCurve:
@@ -25,6 +25,10 @@ class SettlingCurve:
         self.t_exp = data['t']
         self.t_calc = list()
 
+        self.v_s = self.get_v_s()  # Sedimentation velocity [m/s]
+        self.Φ_32_0 = 0  # Sauter mean diameter [m]
+        self.get_Φ_32_0()
+
     def get_settling_curve(self, r_s, plotting=False):
         print(f"Calculating settling curve for r_s = {r_s}")
         self.reset()
@@ -41,20 +45,20 @@ class SettlingCurve:
 
         ε_p = (ε_0 + ε_di) / 2
 
-        Φ_32 = np.full(N_h + 1, Φ_32_0)
+        Φ_32 = np.full(N_h + 1, self.Φ_32_0)
 
         while h_p > 0:
             t = t + Δt
             h_d = h_d + Δh_d
 
             if t < t_x:
-                h_c = h_c + v_s * Δt
+                h_c = h_c + self.v_s * Δt
                 # h_p = 0.001
                 h_p = ((H_0 - h_c) * ε_0 - (1 - ε_0) * h_d) / (ε_p - ε_0)
                 if h_d + h_p >= h_c:
                     t_x = t
                     dh_d = Δh_d / Δt
-                    C_1 = ((v_s - dh_d) * ε_p ** 2 + ε_p * dh_d) / ((h_d - H_0 * ε_0) * (ε_di - ε_p))
+                    C_1 = ((self.v_s - dh_d) * ε_p ** 2 + ε_p * dh_d) / ((h_d - H_0 * ε_0) * (ε_di - ε_p))
                     C_2 = - C_1 * t_x - np.log(ε_di - ε_p)
             if t >= t_x:
                 ε_p = ε_di - np.exp(-C_1 * t - C_2)
@@ -106,13 +110,54 @@ class SettlingCurve:
         plt.draw()
         plt.show()
 
+    def get_v_s(self):
+        print(f"Calculating sedimentation velocity at t₀")
+        v_s, intercept, r, p, std_err = stats.linregress(self.t_exp[1:5], self.h_c_exp[1:5])
+        print(f"v_s = {v_s * 1000} mm/s (σ = {std_err * 1000})\n")
+        return v_s
 
-settling_curve = SettlingCurve()
+    def get_Φ_32_0(self):
+        print(f"Calculating Sauter mean diameter at t₀")
+
+        K_HR = (1 + η_d / η_c) / (2 / 3 + η_d / η_c)
+
+        def Ar(Φ_32_0):
+            return (g * Φ_32_0 ** 3 * Δρ * ρ_c) / (η_c ** 2)
+
+        def get_Φ_32_0_new(Re):
+            return (Re * η_c) / (ρ_c * abs(self.v_s))
+
+        def step(Φ_32_0):
+            if Ar(Φ_32_0) <= 1:
+                Re_rs = ((1 - ε_0) * Ar(Φ_32_0) * K_HR) / (18 * np.exp((2.5 * ε_0) / (1 - 0.61 * ε_0)))
+                return Φ_32_0 - get_Φ_32_0_new(Re_rs)
+            else:
+                Re_inf = 9.72 * ((1 + 0.01 * Ar(Φ_32_0)) ** (4 / 7) - 1)
+                c_w = Ar(Φ_32_0) / (6 * Re_inf ** 2) - 3 / (K_HR * Re_inf)
+                zq2 = (1 - ε_0) / (2 * ε_0 * K_HR) * np.exp((2.5 * ε_0) / (1 - 0.61 * ε_0))
+                q3 = 5 * (ε_0 / (1 - ε_0)) ** 0.45 * K_HR ** (- 3 / 2)
+
+                root = np.sqrt(1 + (c_w * q3 * (1 - ε_0) ** 3) / (54 * zq2 ** 2 * ε_0 ** 2) * Ar(Φ_32_0))
+                Re_rs = (3 * zq2 * ε_0) / (c_w * q3 * (1 - ε_0)) * (root - 1)
+                return Φ_32_0 - get_Φ_32_0_new(Re_rs)
+
+        # Initial estimate
+        self.Φ_32_0 = np.sqrt((18 * η_c * abs(self.v_s)) / (g * Δρ))
+        print(f"Initial estimate: Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}")
+
+        Φ_32_0 = optimize.fsolve(step, self.Φ_32_0 * 10)
+        self.Φ_32_0 = Φ_32_0[0]
+
+        print(f"Φ_32_0 = {self.Φ_32_0 * 1000} mm\n")
+        # return self.Φ_32_0
+
 
 g = 9.81  # Acceleration due to gravity [m/s^2]
 Δρ = 81.2  # Density difference [kg/m^3]
+ρ_c = 1000  # Density of continuous phase [kg/m^3]
 σ = 30 / 1000  # Surface tension [N/m]
 η_c = 1 / 1000  # Viscosity of continuous phase [Pas]
+η_d = 5 / 1000  # Viscosity of dispers phase [Pas]
 
 H_cd = 1e-20  # Hamaker coefficient [Nm] (set to 1*10^-20 by default)
 
@@ -126,9 +171,7 @@ N_t = 500
 N_h = 500
 ε_di = 1
 
-# Derived values
-Φ_32_0 = 0.1 / 1000  # Sauter mean diameter [m]
-v_s = -3 / 1000  # Sedimentation velocity [m/s]
+settling_curve = SettlingCurve()
 
 packed_layer_curve = list()
 
@@ -149,9 +192,9 @@ def τ(h_p, Φ, ID, r_s):
 #     # excel = pd.ExcelFile('data.xlsx')
 #     params = pd.read_excel('data.xlsx', 'Parameters')
 
-def get_r_s(plotting = False):
-    r_s_0 = 0.02  # Initial guess of coalescence parameter [-]
-    fun = lambda r_s : settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error()
+def get_r_s(plotting=False):
+    r_s_0 = 0.002  # Initial guess of coalescence parameter [-]
+    fun = lambda r_s: settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error()
     result = optimize.minimize(fun, [r_s_0], method='Nelder-Mead', bounds=((0.0001, 0.5),))
     print(f"Minimization terminated with Result \n{result}")
     print(f"r_s = {result.x[0]}")
