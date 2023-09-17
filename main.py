@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from parameters import *
 from scipy import optimize, stats
 
 
@@ -87,34 +88,40 @@ class SettlingCurve:
         if plotting: self.plot()
         return self
 
-    def get_error(self, bias = 1):
+    def get_error(self, bias=1.0):
         point_error = 0
         N = len(self.t_exp)
         for t, h_d in zip(self.t_exp, self.h_d_exp):
             h_d_calc = np.interp(t, self.t_calc, self.h_d_calc)
             point_error += ((h_d_calc - h_d) / H_0) ** 2
         time_error = ((self.t_E_exp - self.t_calc[-1]) / (2 * self.t_calc[-1])) ** 2
-        err = bias * np.sqrt(point_error / N) + (1-bias) * time_error
+        err = bias * np.sqrt(point_error / N) + (1 - bias) * time_error
         # print(f"Q = {err}")
         return err
 
     def plot(self):
         plt.clf()
-        plt.plot(self.t_calc, self.h_pl_calc, label='h_d + h_p')
-        plt.plot(self.t_calc, self.h_d_calc, label='h_d')
-        plt.plot(self.t_calc, self.h_c_calc, label='h_c')
 
-        plt.scatter(self.t_exp, self.h_d_exp)
-        plt.scatter(self.t_exp, self.h_c_exp)
+        plt.plot(self.t_calc, self.h_d_calc, label='$h_d$')
+        plt.scatter(self.t_exp, self.h_d_exp, marker='+')
+
+        plt.plot(self.t_calc, self.h_c_calc, label='$h_c$')
+        plt.scatter(self.t_exp, self.h_c_exp, marker='+')
+
+        plt.plot(self.t_calc, self.h_pl_calc, label='$h_d + h_p$') 
 
         plt.legend()
+        plt.xlabel("Time [s]")
+        plt.ylabel("Height [m]")
 
         plt.draw()
         plt.pause(0.0001)
 
     def get_v_s(self):
         print(f"Calculating sedimentation velocity at t₀")
-        v_s, intercept, r, p, std_err = stats.linregress(self.t_exp[0:4], self.h_c_exp[1:5])
+        t = self.t_exp[n_c_low:n_c_high]
+        h_c = self.h_c_exp[n_c_low:n_c_high]
+        v_s, intercept, r, p, std_err = stats.linregress(t, h_c)
         print(f"v_s = {v_s * 1000} mm/s, σ = {std_err * 1000}\n")
         return v_s
 
@@ -147,30 +154,13 @@ class SettlingCurve:
         self.Φ_32_0 = np.sqrt((18 * η_c * abs(self.v_s)) / (g * Δρ))
         print(f"Initial estimate: Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}")
 
-        Φ_32_0 = optimize.fsolve(step, self.Φ_32_0 * 10)
+        helping_factor = 10 # Improve numerical stability and velocity
+        Φ_32_0 = optimize.fsolve(step, self.Φ_32_0 * helping_factor)
         self.Φ_32_0 = Φ_32_0[0]
 
         print(f"Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}\n")
         # return self.Φ_32_0
 
-
-g = 9.81  # Acceleration due to gravity [m/s^2]
-Δρ = 81.2  # Density difference [kg/m^3]
-ρ_c = 1000  # Density of continuous phase [kg/m^3]
-σ = 30 / 1000  # Surface tension [N/m]
-η_c = 1 / 1000  # Viscosity of continuous phase [Pas]
-η_d = 0.04914  # Viscosity of dispers phase [Pas]
-
-H_cd = 1e-20  # Hamaker coefficient [Nm] (set to 1*10^-20 by default)
-
-# Measured values
-H_0 = 1  # Total height [m]
-ε_0 = 0.37  # Holdup at t=0 [-]
-
-# Numerical parameters
-N_t = 500
-N_h = 500
-ε_di = 1
 
 settling_curve = SettlingCurve()
 
@@ -194,7 +184,7 @@ def τ(h_p, Φ, ID, r_s):
 def get_r_s(plotting=False):
     print(f"Calculating settling curve.")
     r_s_0 = 0.002  # Initial guess of coalescence parameter [-]
-    fun = lambda r_s: settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error(bias=0.9)
+    fun = lambda r_s: settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error(bias=bias)
     result = optimize.minimize(fun, [r_s_0], method='Nelder-Mead', bounds=((0.0001, 0.5),))
     # print(f"Minimization terminated with Result \n{result}")
     print(f"r_s = {result.x[0]}")
