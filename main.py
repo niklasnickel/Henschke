@@ -72,11 +72,11 @@ class SettlingCurve:
                 h_eff = Φ_32[i_low] / 2
             else:
                 h_eff = h_p
-            τ_di = τ(h_eff, Φ_32[i_low], 'i', r_s)
+            τ_di = τ(h_eff, Φ_32[i_low], r_s, 'i')
             Δh_d = 2 * ε_di * Φ_32[i_low] * Δt / (3 * τ_di)
             for i in range(i_low, i_high - 1):
                 h_py = (h_d + h_p * ε_p - i * Δh * ε_0) / ε_p
-                τ_dd = τ(h_py, Φ_32[i], 'd', r_s)
+                τ_dd = τ(h_py, Φ_32[i], r_s, 'd')
                 Φ_32[i] = Φ_32[i] + Δt * Φ_32[i] / (6 * τ_dd)
 
             self.h_pl_calc.append(h_d + h_p)
@@ -108,7 +108,7 @@ class SettlingCurve:
         plt.plot(self.t_calc, self.h_c_calc, label='$h_c$')
         plt.scatter(self.t_exp, self.h_c_exp, marker='+')
 
-        plt.plot(self.t_calc, self.h_pl_calc, label='$h_d + h_p$') 
+        plt.plot(self.t_calc, self.h_pl_calc, label='$h_d + h_p$')
 
         plt.legend()
         plt.xlabel("Time [s]")
@@ -164,17 +164,6 @@ class SettlingCurve:
 
 settling_curve = SettlingCurve()
 
-
-def τ(h_p, Φ, ID, r_s):
-    La_mod = (g * Δρ / σ) ** 0.6 * Φ * h_p ** 0.2
-    R_F = Φ * np.sqrt(1 - 4.7 / (4.7 + La_mod))
-    if ID == 'd':
-        R_F = 0.3025 * R_F
-    else:
-        R_F = 0.5240 * R_F
-    R_a = 0.5 * Φ * (1 - np.sqrt(1 - 4.7 / (4.7 + La_mod)))
-    τ = 7.65 * η_c * R_a ** (7 / 3) / (H_cd ** (1 / 6) * σ ** (5 / 6) * R_F * r_s)
-    return τ
 
 
 # def import_data():

@@ -19,6 +19,7 @@ H_d = params["H_d"]["Value"]  # Total height [m]
 
 η_c = params["η_c"]["Value"]  # Viscosity of continuous phase [Pas]
 η_d = params["η_d"]["Value"]  # Viscosity of dispers phase [Pas]
+η_v = params["η_v"]["Value"]  # Correction Viscosity for surface-active components [Pas]
 
 # Numerical parameters
 N_t = 500
@@ -29,3 +30,17 @@ n_c_low = 0
 n_c_high = 4
 
 bias = 0.9
+
+π = np.pi
+
+
+def τ(h_p, Φ, r_s, ID):
+    La_mod = (g * Δρ / σ) ** 0.6 * Φ * h_p ** 0.2
+    R_F = Φ * np.sqrt(1 - 4.7 / (4.7 + La_mod))
+    if ID == 'd':
+        R_F = 0.3025 * R_F
+    else:
+        R_F = 0.5240 * R_F
+    R_a = 0.5 * Φ * (1 - np.sqrt(1 - 4.7 / (4.7 + La_mod)))
+    τ = 7.65 * η_c * R_a ** (7 / 3) / (H_cd ** (1 / 6) * σ ** (5 / 6) * R_F * r_s)
+    return τ
