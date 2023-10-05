@@ -26,8 +26,8 @@ N_t = 500
 N_h = 500
 ε_di = 1
 
-n_c_low = 0
-n_c_high = 4
+n_c_low = 3
+n_c_high = 11
 
 bias = 0.9
 

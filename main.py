@@ -1,6 +1,4 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 from parameters import *
 from scipy import optimize, stats
 
@@ -55,7 +53,6 @@ class SettlingCurve:
 
             if t < t_x:
                 h_c = h_c + self.v_s * Δt
-                # h_p = 0.001
                 h_p = ((H_0 - h_c) * ε_0 - (1 - ε_0) * h_d) / (ε_p - ε_0)
                 if h_d + h_p >= h_c:
                     t_x = t
@@ -154,7 +151,7 @@ class SettlingCurve:
         self.Φ_32_0 = np.sqrt((18 * η_c * abs(self.v_s)) / (g * Δρ))
         print(f"Initial estimate: Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}")
 
-        helping_factor = 10 # Improve numerical stability and velocity
+        helping_factor = 10  # Improve numerical stability and velocity
         Φ_32_0 = optimize.fsolve(step, self.Φ_32_0 * helping_factor)
         self.Φ_32_0 = Φ_32_0[0]
 
@@ -164,11 +161,6 @@ class SettlingCurve:
 
 settling_curve = SettlingCurve()
 
-
-
-# def import_data():
-#     # excel = pd.ExcelFile('data.xlsx')
-#     params = pd.read_excel('data.xlsx', 'Parameters')
 
 def get_r_s(plotting=False):
     print(f"Calculating settling curve.")
