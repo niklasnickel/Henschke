@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 print("Importing data...")
-params = pd.read_excel('data.xlsx', 'Parameters', index_col=0)
+params = pd.read_excel('in/data.xlsx', 'Parameters', index_col=0)
 
 g = 9.81  # Acceleration due to gravity [m/s^2]
 H_cd = 1e-20  # Hamaker coefficient [Nm] (set to 1*10^-20 by default)

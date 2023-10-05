@@ -12,7 +12,7 @@ class SettlingCurve:
         self.t_calc = list()
 
     def __init__(self):
-        data = pd.read_excel('data.xlsx', 'Data')
+        data = pd.read_excel('in/data.xlsx', 'Data')
         self.h_c_exp = data['h_c']
         self.h_c_calc = list()
 
