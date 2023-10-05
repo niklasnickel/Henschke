@@ -1,25 +1,42 @@
+import os
+
 import numpy as np
 import pandas as pd
-
-print("Importing data...")
-params = pd.read_excel('in/data.xlsx', 'Parameters', index_col=0)
 
 g = 9.81  # Acceleration due to gravity [m/s^2]
 H_cd = 1e-20  # Hamaker coefficient [Nm] (set to 1*10^-20 by default)
 
-H_0 = params["H_0"]["Value"]  # Total height [m]
-H_d = params["H_d"]["Value"]  # Total height [m]
-ε_0 = H_d / H_0  # Holdup at t=0 [-]
+# H_0, H_d, ε_0, ρ_c, ρ_d, Δρ, σ, η_c, η_d, η_v = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-ρ_c = params["ρ_c"]["Value"]  # Density of continuous phase [kg/m^3]
-ρ_d = params["ρ_d"]["Value"]  # Density of dispers phase [kg/m^3]
-Δρ = np.abs(ρ_c - ρ_d)  # Density difference [kg/m^3]
 
-σ = params["σ"]["Value"]  # Surface tension [N/m]
+def update_params(file):
+    print("Updating parameters...")
+    params = pd.read_excel(os.path.join('in', file), 'Parameters', index_col=0)
 
-η_c = params["η_c"]["Value"]  # Viscosity of continuous phase [Pas]
-η_d = params["η_d"]["Value"]  # Viscosity of dispers phase [Pas]
-η_v = params["η_v"]["Value"]  # Correction Viscosity for surface-active components [Pas]
+    global H_0
+    H_0 = params["H_0"]["Value"]  # Total height [m]
+    global H_d
+    H_d = params["H_d"]["Value"]  # Total height [m]
+    global ε_0
+    ε_0 = H_d / H_0  # Holdup at t=0 [-]
+
+    global ρ_c
+    ρ_c = params["ρ_c"]["Value"]  # Density of continuous phase [kg/m^3]
+    global ρ_d
+    ρ_d = params["ρ_d"]["Value"]  # Density of dispers phase [kg/m^3]
+    global Δρ
+    Δρ = np.abs(ρ_c - ρ_d)  # Density difference [kg/m^3]
+
+    global σ
+    σ = params["σ"]["Value"]  # Surface tension [N/m]
+
+    global η_c
+    η_c = params["η_c"]["Value"]  # Viscosity of continuous phase [Pas]
+    global η_d
+    η_d = params["η_d"]["Value"]  # Viscosity of dispers phase [Pas]
+    global η_v
+    η_v = params["η_v"]["Value"]  # Correction Viscosity for surface-active components [Pas]
+
 
 # Numerical parameters
 N_t = 500

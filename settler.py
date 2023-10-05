@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 
 from parameters import *
+import parameters as p
 
 V_tot = 500 / 1e6  # Total volume [m^3/s]
 L_A = 4  # Settler length [m]
@@ -20,10 +21,10 @@ N_l = 1000
 
 
 def get_η_dis():
-    α = η_c / (η_d + η_v)
+    α = p.η_c / (p.η_d + p.η_v)
     Ω = 4 * ε_p ** (7 / 3) + 10 - (84 / 11) * ε_p ** (2 / 3) + 4 * α * (1 - ε_p ** (7 / 3))
     Ω /= 10 * (1 - ε_p ** (10 / 3)) - 25 * ε_p * (1 - ε_p ** (4 / 3)) + 10 * α * (1 - ε_p) * (1 - ε_p ** (7 / 3))
-    η_dis = η_c * (1 + 5.5 * Ω * ε_p)
+    η_dis = p.η_c * (1 + 5.5 * Ω * ε_p)
     print(f"η_dis = {η_dis}")
     return η_dis
 
@@ -33,7 +34,7 @@ def get_η_dis():
 
 def get_slip():
     σ_0 = 1
-    slip = 1 - np.exp(-12300 * ρ_c / Δρ * (σ / σ_0) ** 3)
+    slip = 1 - np.exp(-12300 * p.ρ_c / p.Δρ * (p.σ / σ_0) ** 3)
     print(f"slip = {slip}")
     # slip = 0.15
     return slip
@@ -45,9 +46,9 @@ slip = get_slip()
 def L_in(H_p_0):
     v_in = (4 * V_tot) / (π * D_in ** 2)
     v_A = (4 * V_tot) / (π * D_A ** 2)
-    ρ = ε_in * ρ_d + (1 - ε_in) * ρ_c
+    ρ = ε_in * p.ρ_d + (1 - ε_in) * p.ρ_c
 
-    Ar_Dis = (g * Φ_32_0 ** 3 * Δρ * ρ) / (η_dis ** 2)
+    Ar_Dis = (g * Φ_32_0 ** 3 * p.Δρ * ρ) / (η_dis ** 2)
     Re_A = (ρ * v_A * D_A) / η_dis
     Re_in = (ρ * v_in * D_in) / η_dis
 
@@ -91,8 +92,8 @@ for k in range(20):
                     h_p_l = Φ_32[i_low] / 2
                 τ_di = τ(h_p_l, Φ_32[i_low], r_s, 'i')
                 ΔV_dis = Δl * 2 * D_A * ε_di * Φ_32[i_low] / (3 * τ_di * ε_p)
-        Δh_p = (126 * (η_c + η_d) + 11.3 * slip * η_dis) * V_dis * Δl
-        Δh_p /= (h_p[j - 1] * D_A ** 3 * g * ε_p * (1 - ε_p) * Δρ)
+        Δh_p = (126 * (p.η_c + p.η_d) + 11.3 * slip * η_dis) * V_dis * Δl
+        Δh_p /= (h_p[j - 1] * D_A ** 3 * g * ε_p * (1 - ε_p) * p.Δρ)
         h_p[j] = h_p[j - 1] - Δh_p
         V_dis -= ΔV_dis
         i_low = round(N_h - (N_h - 1) * V_dis * ε_p / (V_tot * ε_in))
