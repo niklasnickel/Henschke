@@ -1,11 +1,28 @@
-import importlib
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-
-from parameters import *
-import parameters as p
 from scipy import optimize, stats
+
+import parameters as p
+from parameters import *
+
+
+def save_result(repetition, key, value):
+    repetition = Path(repetition).stem
+    excel = 'out/result.xlsx'
+    df = pd.read_excel(excel, index_col=0)
+    if repetition not in df:
+        df[repetition] = ''
+    if key not in df.index:
+        df.loc[key] = None
+    df.at[key, repetition] = value
+    df.to_excel(excel)
+
+
+def clear_result():
+    excel = 'out/result.xlsx'
+    df = pd.DataFrame()
+    df.to_excel(excel)
 
 
 class SettlingCurve:
@@ -19,7 +36,6 @@ class SettlingCurve:
     def __init__(self, file):
         data = pd.read_excel(os.path.join('in', file), 'Data')
         p.update_params(file)
-        print()
         # dir() = parameters.dir()
         # importlib.reload(parameters)
         # from parameters import *
@@ -130,7 +146,9 @@ class SettlingCurve:
         t = self.t_exp[n_c_low:n_c_high]
         h_c = self.h_c_exp[n_c_low:n_c_high]
         v_s, intercept, r, p, std_err = stats.linregress(t, h_c)
-        print(f"v_s = {v_s * 1000} mm/s, σ = {std_err * 1000}\n")
+        print(f"v_s = {v_s * 1000:.3f} mm/s, σ = {std_err * 1000:.3f}\n")
+        save_result(file, 'v_s', v_s)
+        save_result(file, 'STD(v_s)', std_err)
         return v_s
 
     def get_Φ_32_0(self):
@@ -160,22 +178,26 @@ class SettlingCurve:
 
         # Initial estimate
         self.Φ_32_0 = np.sqrt((18 * p.η_c * abs(self.v_s)) / (g * p.Δρ))
-        print(f"Initial estimate: Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}")
+        print(f"Initial estimate: Φ_32_0 = {self.Φ_32_0 * 1000:.3f} mm, Ar = {Ar(self.Φ_32_0):.3f}")
 
         helping_factor = 10  # Improve numerical stability and velocity
         Φ_32_0 = optimize.fsolve(step, self.Φ_32_0 * helping_factor)
         self.Φ_32_0 = Φ_32_0[0]
-
-        print(f"Φ_32_0 = {self.Φ_32_0 * 1000} mm, Ar = {Ar(self.Φ_32_0)}\n")
+        save_result(file, 'Φ_32_0', self.Φ_32_0)
+        save_result(file, 'Ar', Ar(self.Φ_32_0))
+        print(f"Φ_32_0 = {self.Φ_32_0 * 1000:.3f} mm, Ar = {Ar(self.Φ_32_0):.3f}\n")
         # return self.Φ_32_0
 
+
 def get_r_s(plotting=False):
-    print(f"Calculating settling curve.")
+    print(f"Calculating settling curve...")
     r_s_0 = 0.002  # Initial guess of coalescence parameter [-]
     fun = lambda r_s: settling_curve.get_settling_curve(r_s[0], plotting=plotting).get_error(bias=bias)
     result = optimize.minimize(fun, [r_s_0], method='Nelder-Mead', bounds=((0.0001, 0.5),))
     # print(f"Minimization terminated with Result \n{result}")
-    print(f"r_s = {result.x[0]}")
+    r_s = result.x[0]
+    save_result(file, 'r_s', r_s)
+    print(f"r_s = {r_s:.3f}")
     return result.x[0]
 
 
@@ -183,12 +205,23 @@ calculate_all_curves = True
 
 if __name__ == '__main__':
     # import_data()
+    clear_result()
     plt.show()
+    files = sorted(os.listdir('in'))
+    number_of_files = len(files)
     if calculate_all_curves:
-        for file in os.listdir('in'):
+        for i, file in enumerate(files):
+            print("\n")
+            print("=================================================")
+            print(f"\t Evaluating file {i+1} of {number_of_files} ({file})")
+            print("=================================================")
             settling_curve = SettlingCurve(file)
             settling_curve.get_settling_curve(get_r_s(plotting=True))
             settling_curve.plot()
     plt.show()
+
+    print("=================================================")
+    print("                     DONE                        ")
+    print("=================================================")
     # Q = settling_curve.get_error()
     # print(Q)
