@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 
-from parameters import *
 import parameters as p
+from parameters import *
 
 V_tot = 500 / 1e6  # Total volume [m^3/s]
 L_A = 4  # Settler length [m]

@@ -6,8 +6,6 @@ import pandas as pd
 g = 9.81  # Acceleration due to gravity [m/s^2]
 H_cd = 1e-20  # Hamaker coefficient [Nm] (set to 1*10^-20 by default)
 
-# H_0, H_d, ε_0, ρ_c, ρ_d, Δρ, σ, η_c, η_d, η_v = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
 
 def update_params(file):
     print("Updating parameters...")
@@ -46,7 +44,7 @@ N_h = 500
 n_c_low = 3
 n_c_high = 11
 
-bias = 0.9
+bias = 0.5
 
 π = np.pi
 

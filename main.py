@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import cardinality
 import matplotlib.pyplot as plt
 from scipy import optimize, stats
 
@@ -207,13 +208,14 @@ if __name__ == '__main__':
     # import_data()
     clear_result()
     plt.show()
-    files = sorted(os.listdir('in'))
-    number_of_files = len(files)
+    files = [f for f in sorted(os.listdir('in')) if f.endswith('.xlsx')]
+    # files = filter(lambda f: f.endswith('.xlsx'), sorted(os.listdir('in')))
+    number_of_files = cardinality.count(files)
     if calculate_all_curves:
         for i, file in enumerate(files):
             print("\n")
             print("=================================================")
-            print(f"\t Evaluating file {i+1} of {number_of_files} ({file})")
+            print(f"\t Evaluating file {i + 1} of {number_of_files} ({file})")
             print("=================================================")
             settling_curve = SettlingCurve(file)
             settling_curve.get_settling_curve(get_r_s(plotting=True))
@@ -223,5 +225,3 @@ if __name__ == '__main__':
     print("=================================================")
     print("                     DONE                        ")
     print("=================================================")
-    # Q = settling_curve.get_error()
-    # print(Q)
